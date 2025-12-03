@@ -1,0 +1,78 @@
+# from bdb import effective
+# from matplotlib.pyplot import margins
+from python_elo import team
+from python_elo import elo_gainer
+
+class elo_calc(elo_gainer, team):
+    def __init__(self):
+        pass
+
+    def expected_result(self, rating1: float, rating2: float, c: float = 400) -> int:
+        '''Formula for expected_result according to chess elos '''
+        qa = 10 ** (rating1 / c)
+        qb = 10 ** (rating2 / c)
+        expected_result = qa / (qa + qb)
+        return expected_result
+    # Teams Elo calculation (does not work for players)
+
+    def score_bias(self, home_goals: int, away_goals: int) -> float:
+        ''' Calculate bias based on match score'''
+        if home_goals + away_goals == 0:
+            return 0.5 # Neutral bias for 0-0 draws
+        return home_goals / (home_goals + away_goals) # values near 1 for big home wins, near 0 for big losses
+
+    def home_bias(self, result: str) -> float:
+        ''' Coefficient for home advantage bias.'''
+        gamma = 0.2
+        if result == 'H':
+            return 1 - gamma
+        elif result == 'D':
+            return 1
+        else: return 1 + gamma
+
+    def score_bias(self, home_goals: int, away_goals: int) -> float:
+        ''' Calculate bias based on match score'''
+        goal_difference = abs(home_goals - away_goals)
+        if goal_difference == 0:
+            return 1 # Neutral bias for 0-0 draws
+        alpha = 0.2 # can change, let's figure what is best later
+        return 1 + alpha * (goal_difference - 1) # greaters difference leads to greater scaling factor. alpha scales
+
+    def odds_bias(self, odds: tuple, SH: float) -> float:
+        try:
+            home_odds =1/odds[0]
+            draw_odds = 1/odds[1]
+            away_odds = 1/odds[2]
+        except ZeroDivisionError:
+            return 1 # neutral bias if odds are zero
+        Q = home_odds + draw_odds + away_odds
+        home_prob = home_odds/Q
+        draw_prob = draw_odds/Q
+        away_prob = away_odds/Q
+        books_expected_score = home_prob + draw_prob * 0.5 # home_prob * 1, away_prob * 0
+        # surprise measure in the sense of how much the result deviated from what bookmakers predicted
+        surprise_measure = abs(SH - books_expected_score) # SH is calculated in elo_calc, it is = 1 if home wins, 0 if away wins, 0.5 if draw
+        beta = 1 # scaling factor
+        return 1 + beta * surprise_measure
+
+    def elo_calculation_biased(self, team1: team, team2: team, result: str, bias: float, odds: tuple, weighted: bool = False) -> tuple:
+        ''' Calculate Elo ratings with bias for home team advantage and match score. Inspired by
+        https://stanislav-stankovic.medium.com/elo-rating-system-6196cc59941e. Returns tuple
+        (new_home_rating, new_away_rating, delta) where delta is the change in rating for home team.'''
+
+        rh = team1.rating # RH
+        ra = team2.rating # RA
+        c = 400 # scale factor
+        K = 32 # K-factor
+        result_value = {'H': 1, 'D': 0.5, 'A': 0}[result] # Convert result to 1, 0, 0.5 = SH
+        h0 = 0 # home advantage bias shifter. Using 0 almost always I suppose # H0
+        rh_prime = rh + h0 # RH'
+        home_expected = self.expected_result(rh_prime, ra, c) # 1/(1 + 10^((RA - RH')/c))
+        effective_delta = K * (result_value - home_expected) # K(SH - EH)
+
+        loc_bias = self.home_bias()
+        margin_bias = self.score_bias()
+        odds_bias = self.odds_bias(odds, result_value)
+
+        delta = effective_delta * loc_bias * odds_bias + margin_bias
+        return (team1.rating + delta, team2.rating + delta, delta)
