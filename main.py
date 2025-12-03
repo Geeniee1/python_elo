@@ -2,7 +2,7 @@ from tokenize import String
 from python_elo.player import player
 from python_elo.team import team
 import pandas as pd
-import soccerdata as sd
+import soccerdata as sd # Dunno why pylance is complaining
 
 class main(player, team):
     def __init__(self, league, season):
