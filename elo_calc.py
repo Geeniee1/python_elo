@@ -1,16 +1,17 @@
 # from bdb import effective
 # from matplotlib.pyplot import margins
-from python_elo import team
-from python_elo import elo_gainer
+from python_elo.team import Team
 
-class elo_calc(elo_gainer, team):
-    def __init__(self):
-        pass
+class EloCalc:
+    def __init__(self, k_factor: float = 20.0, scale: float = 400.0, home_advantage: float = 0.0):
+        self.k = k_factor
+        self.scale = scale
+        self.h0 = home_advantage
 
-    def expected_result(self, rating1: float, rating2: float, c: float = 400) -> int:
+    def expected_result(self, rating1: float, rating2: float) -> float:
         '''Formula for expected_result according to chess elos '''
-        qa = 10 ** (rating1 / c)
-        qb = 10 ** (rating2 / c)
+        qa = 10 ** (rating1 / self.scale)
+        qb = 10 ** (rating2 / self.scale)
         expected_result = qa / (qa + qb)
         return expected_result
     # Teams Elo calculation (does not work for players)
@@ -55,24 +56,21 @@ class elo_calc(elo_gainer, team):
         beta = 1 # scaling factor
         return 1 + beta * surprise_measure
 
-    def elo_calculation_biased(self, team1: team, team2: team, result: str, odds: tuple, weighted: bool = False) -> float:
+    def elo_delta(self, home_rating: float, away_rating: float, result: str, goals: tuple, odds: tuple | None = None) -> float:
         ''' Calculate Elo ratings with bias for home team advantage and match score. Inspired by
         https://stanislav-stankovic.medium.com/elo-rating-system-6196cc59941e. Returns tuple
         (new_home_rating, new_away_rating, delta) where delta is the change in rating for home team.'''
 
-        rh = team1.rating # RH
-        ra = team2.rating # RA
-        c = 400 # scale factor
-        K = 32 # K-factor
-        result_value = {'H': 1, 'D': 0.5, 'A': 0}[result] # Convert result to 1, 0, 0.5 = SH
-        h0 = 0 # home advantage bias shifter. Using 0 almost always I suppose # H0
-        rh_prime = rh + h0 # RH'
-        home_expected = self.expected_result(rh_prime, ra, c) # 1/(1 + 10^((RA - RH')/c))
-        effective_delta = K * (result_value - home_expected) # K(SH - EH)
+        rh = home_rating + self.h0
+        ra = away_rating
+        result_value = {'H': 1.0, 'D': 0.5, 'A': 0.0}[result]
+        home_expected = self.expected_result(rh, ra) # 1/(1 + 10^((RA - RH')/scale))
+        effective_delta = self.k * (result_value - home_expected)
 
-        loc_bias = self.home_bias()
-        margin_bias = self.score_bias()
-        odds_bias = self.odds_bias(odds, result_value)
+        loc_bias = self.home_bias(result)
+        home_goals, away_goals = int(goals[0]), int(goals[1])
+        margin_bias = self.score_bias(home_goals, away_goals)# 1.0  # basic; can plug score-based multiplier later
+        odds_b = self.odds_bias(odds, result_value) if odds else 1.0
 
-        delta = effective_delta * loc_bias * odds_bias + margin_bias
+        delta = effective_delta * loc_bias * odds_b * margin_bias
         return delta
