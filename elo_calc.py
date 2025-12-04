@@ -55,7 +55,7 @@ class elo_calc(elo_gainer, team):
         beta = 1 # scaling factor
         return 1 + beta * surprise_measure
 
-    def elo_calculation_biased(self, team1: team, team2: team, result: str, bias: float, odds: tuple, weighted: bool = False) -> tuple:
+    def elo_calculation_biased(self, team1: team, team2: team, result: str, odds: tuple, weighted: bool = False) -> float:
         ''' Calculate Elo ratings with bias for home team advantage and match score. Inspired by
         https://stanislav-stankovic.medium.com/elo-rating-system-6196cc59941e. Returns tuple
         (new_home_rating, new_away_rating, delta) where delta is the change in rating for home team.'''
@@ -75,4 +75,4 @@ class elo_calc(elo_gainer, team):
         odds_bias = self.odds_bias(odds, result_value)
 
         delta = effective_delta * loc_bias * odds_bias + margin_bias
-        return (team1.rating + delta, team2.rating + delta, delta)
+        return delta

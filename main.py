@@ -1,45 +1,50 @@
-from tokenize import String
-from python_elo.player import player
-from python_elo.team import team
-import pandas as pd
-import soccerdata as sd # Dunno why pylance is complaining
-from python_elo.elo_calc import elo_calc
+from python_elo import data_cleaner, elo_calc
 
-class main(player, team):
+
+class main(data_cleaner):
+    pass
     def __init__(self, league, season):
         self.league = league
         self.season = season
-        # Additional initialization code can be added here
-
-# TODO Let's start with season 24/25
-# load data using soccerdata
-
-def read_match_data(leagues = "ENG-Premier League", seasons = 24) -> pd.DataFrame:
-    # Example function to read match data
-    data = sd.MatchHistory(leagues="ENG-Premier League", seasons=24)
-    return data.read_games()
-
-def clean_match_data(df: pd.DataFrame) -> pd.DataFrame:
-    # Example function to clean match data
-    # HTG = Home Team Goals, ATG = Away Team Goals, FTR = Full Time Result
-    # TODO Add clause for retrieving odds data
-    # mean_home = AvgH
-    # mean_away = AvgA
-    # mean_draw = AvgD
     
-    df = df[['home_team', 'away_team','HTG', 'ATG', 'FTR', 'AvgH', 'AvgD', 'AvgA']]
-    return df
-
-df = read_match_data() # read math data for 24/25 premier league
-df = clean_match_data(df) # clean the data to only save the teams playing in the game, and result
-
-# TODO add biases to elo calculations
-# Teams Elo calculation (does not work for players)
-
-# write a function to display current Elo ratings
-# write tests for the main functionalities
-# write documentation for the main module
-# update readme file
-# implement error handling and logging
-# visualise Elo rating changes over time as graph and as table
-# optimise code for performance if necessary
+    def run_elo_system(self):
+        df = data_cleaner.read_match_data(league, season) # read match data
+        cleaned_df = data_cleaner.clean_match_data(df) # clean the data
+        # odds_tuple = cleaned_df[['AvgH, avgD', 'avgA']]
+        teams = ('Arsenal',
+                'Aston Villa',
+                'Bournemouth',
+                'Brentford',
+                'Brighton',
+                'Chelsea',
+                'Crystal Palace',
+                'Everton',
+                'Fulham',
+                'Ipswich',
+                'Leicester',
+                'Liverpool',
+                'Man City',
+                'Man United',
+                'Newcastle',
+                "Nott'm Forest",
+                'Southampton',
+                'Tottenham',
+                'West Ham',
+                'Wolves')
+        running_elo = {team: 1500 for team in teams} # initialise all teams with 1500 Elo
+        for match in cleaned_df.itertuples():
+            home_team = match.home_team
+            away_team = match.away_team
+            home_goals = match.HTG
+            away_goals = match.ATG
+            result = match.FTR
+            odds = (match.AvgH, match.AvgD, match.AvgA)
+            delta = elo_calc(home_team, away_team, result, odds)
+            running_elo[home_team] += delta
+            running_elo[away_team] -= delta
+            
+            # Here you would implement the Elo calculation logic
+            # For example:
+            # elo_calc.update_ratings(home_team, away_team, home_goals, away_goals, result, odds_tuple)
+        
+        
