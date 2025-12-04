@@ -14,10 +14,6 @@ class main(player, team):
 # TODO Let's start with season 24/25
 # load data using soccerdata
 
-def mean(df: pd.DataFrame, column: str) -> float:
-    #TODO function to calculate mean of columns for odds
-    pass
-
 def read_match_data(leagues = "ENG-Premier League", seasons = 24) -> pd.DataFrame:
     # Example function to read match data
     data = sd.MatchHistory(leagues="ENG-Premier League", seasons=24)
@@ -27,10 +23,11 @@ def clean_match_data(df: pd.DataFrame) -> pd.DataFrame:
     # Example function to clean match data
     # HTG = Home Team Goals, ATG = Away Team Goals, FTR = Full Time Result
     # TODO Add clause for retrieving odds data
-    # mean_home = mean()
-    # mean_away = mean()
-    # mean_draw = mean()
-    df = df[['home_team', 'away_team','HTG', 'ATG', 'FTR']]
+    # mean_home = AvgH
+    # mean_away = AvgA
+    # mean_draw = AvgD
+    
+    df = df[['home_team', 'away_team','HTG', 'ATG', 'FTR', 'AvgH', 'AvgD', 'AvgA']]
     return df
 
 df = read_match_data() # read math data for 24/25 premier league
